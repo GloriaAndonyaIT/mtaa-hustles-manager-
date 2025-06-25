@@ -1,33 +1,47 @@
-// src/App.jsx
+// App.jsx
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./components/context/AuthContext";
 import LandingPage from "./components/common/LandingPage";
 import AuthPage from "./pages/AuthPage";
 import LoadingSpinner from "./components/common/LoadingSpinner";
 import Navigation from "./components/common/Navigation";
 import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import HustlePage from './pages/HustlesPage';
 import HustleDetailPage from './pages/HustleDetailPage';
 import TransactionForm from './components/hustles/TransactionForm';
 import HustleForm from './components/hustles/HustleForm';
 import Debt from './pages/Debt';
 
-//  Protect routes based on authentication
-const ProtectedRoute = ({ children }) => {
-  const { user } = useAuth();
-  return user ? children : <Navigate to="/" replace />;
+const ProtectedRoute = ({ children, adminOnly = false }) => {
+  const { user, isAuthenticated } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
+  if (adminOnly && !user?.is_admin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
 };
 
 const PublicRoute = ({ children }) => {
-  const { user } = useAuth();
-  return user ? <Navigate to="/dashboard" replace /> : children;
+  const { isAuthenticated, user } = useAuth();
+  
+  if (isAuthenticated) {
+    return <Navigate to={user?.is_admin ? '/admin/dashboard' : '/dashboard'} replace />;
+  }
+
+  return children;
 };
 
-//  Shared layout for all protected pages
 const AppLayout = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -36,6 +50,7 @@ const AppLayout = ({ children }) => {
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        isAdmin={user?.is_admin}
       />
       
       <div className="lg:pl-64">
@@ -62,17 +77,15 @@ const AppLayout = ({ children }) => {
   );
 };
 
-// Main routing logic
 function AppContent() {
   const [loading, setLoading] = useState(true);
+  const { loading: authLoading } = useAuth();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    if (!authLoading) {
       setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [authLoading]);
 
   if (loading) {
     return (
@@ -84,7 +97,6 @@ function AppContent() {
 
   return (
     <Routes>
-      {/*  Public Routes */}
       <Route path="/" element={
         <PublicRoute>
           <LandingPage />
@@ -97,15 +109,21 @@ function AppContent() {
         </PublicRoute>
       } />
 
-      {/*  Redirects for old login/signup paths */}
       <Route path="/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="/signup" element={<Navigate to="/auth/signup" replace />} />
 
-      {/*  Protected Routes */}
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <AppLayout>
             <Dashboard />
+          </AppLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/admin/dashboard" element={
+        <ProtectedRoute adminOnly>
+          <AppLayout>
+            <AdminDashboard />
           </AppLayout>
         </ProtectedRoute>
       } />
@@ -142,7 +160,6 @@ function AppContent() {
         </ProtectedRoute>
       } />
       
-
       <Route path="/debts" element={
         <ProtectedRoute>
           <AppLayout>
@@ -151,12 +168,10 @@ function AppContent() {
         </ProtectedRoute>
       } />
 
-      {/*  Catch-All Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
-
 
 function App() {
   return (
