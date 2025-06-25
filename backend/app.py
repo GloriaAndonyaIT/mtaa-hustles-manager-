@@ -38,7 +38,10 @@ migrate = Migrate(app, db)
 jwt = JWTManager(app)  # Remove the duplicate init_app call
 
 # Enable CORS for all routes
-CORS(app, supports_credentials=True)
+CORS(app, resources={
+    r"/auth/*": {"origins": "http://localhost:5174"},
+    r"/users/*": {"origins": "http://localhost:5174"}
+}, supports_credentials=True)
 
 # JWT token blocklist checker
 @jwt.token_in_blocklist_loader

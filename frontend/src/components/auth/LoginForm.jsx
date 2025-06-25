@@ -1,4 +1,3 @@
-// LoginForm.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "../../components/context/AuthContext";
@@ -34,39 +33,34 @@ const LoginForm = () => {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/auth/login', {
+      const response = await fetch('http://127.0.0.1:5000/users/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
-           email: formData.username, 
+          username: formData.username,
           password: formData.password
         }),
         credentials: 'include'
       });
 
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        throw new Error(`Server returned: ${text.substring(0, 100)}`);
-      }
-
       const data = await response.json();
 
-      if (response.ok) {
-        const success = await login(data.access_token);
-        if (success) {
-          navigate(data.user.is_admin ? '/admin/dashboard' : '/dashboard');
-        } else {
-          setError('Login failed. Please try again.');
-        }
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'Invalid username or password');
+      }
+
+      const success = await login(data.access_token);
+      if (success) {
+        navigate(data.user?.is_admin ? '/admin/dashboard' : '/dashboard');
       } else {
-        setError(data.error || 'Login failed. Please check your credentials.');
+        setError('Failed to initialize user session');
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message || 'Network error. Please check your connection.');
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +92,7 @@ const LoginForm = () => {
         <FormButton 
           type="submit" 
           isLoading={isLoading}
-          disabled={!formData.username || !formData.password}
+          disabled={!formData.username || !formData.password || isLoading}
         >
           {isLoading ? 'Logging in...' : 'Log in'}
         </FormButton>

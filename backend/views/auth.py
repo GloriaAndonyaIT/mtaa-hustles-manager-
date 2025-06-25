@@ -1,49 +1,50 @@
-from flask import Flask, request, jsonify, Blueprint, current_app
+from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import check_password_hash
-from models import db, User, TokenBlocklist
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, get_jwt
-from datetime import datetime
-from datetime import timezone
+from models import db, User
+from flask_jwt_extended import create_access_token
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    email = request.json.get("email", None)
-    password = request.json.get("password", None)
+    try:
+        data = request.get_json()
+        current_app.logger.info(f"Login attempt with data: {data}")
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
 
-    if not email or not password:
-        return jsonify({"error": "email and password are required to login"}), 400
+        username = data.get("username")
+        password = data.get("password")
 
-    user = User.query.filter_by(email=email).first()
+        if not username or not password:
+            return jsonify({"error": "Username and password are required"}), 400
 
-    if user and check_password_hash(user.password, password):
+        user = User.query.filter_by(username=username).first()
+        
+        if not user:
+            current_app.logger.warning(f"User not found: {username}")
+            return jsonify({"error": "Invalid username or password"}), 401
+
+        if not check_password_hash(user.password, password):
+            current_app.logger.warning(f"Invalid password for user: {username}")
+            return jsonify({"error": "Invalid username or password"}), 401
+
         access_token = create_access_token(identity=user.id)
-        return jsonify(access_token=access_token), 200     
+        
+        return jsonify({
+            "access_token": access_token,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "is_admin": user.is_admin
+            }
+        }), 200
 
-    else:
-        return jsonify({"error": "Invalid credentials"}), 401
-
-#  fetching logged in user
-@auth_bp.route("/current_user", methods=["GET"])
-@jwt_required()
-def fetch_current_user():
-    current_user_id = get_jwt_identity()
-
-    user = User.query.get(current_user_id)
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    user_data = {
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "is_admin": user.is_admin,
-        "created_at": user.created_at.isoformat() if user.created_at else None,
-        "updated_at": user.updated_at.isoformat() if user.updated_at else None
-    }
-    return jsonify(user_data), 200
+    except Exception as e:
+        current_app.logger.error(f"Login error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 # Logout
 @auth_bp.route("/logout", methods=["DELETE"])

@@ -16,8 +16,10 @@ export const AuthProvider = ({ children }) => {
         try {
           const response = await fetch('http://127.0.0.1:5000/users/me', {
             headers: {
-              'Authorization': `Bearer ${storedToken}`
-            }
+              'Authorization': `Bearer ${storedToken}`,
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include'
           });
           
           if (response.ok) {
@@ -39,14 +41,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (token) => {
-    localStorage.setItem('token', token);
-    setToken(token);
-    
     try {
+      localStorage.setItem('access_token', token);
+      setToken(token);
+      
       const response = await fetch('http://127.0.0.1:5000/users/me', {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
       });
       
       if (response.ok) {
@@ -66,8 +70,10 @@ export const AuthProvider = ({ children }) => {
       await fetch('http://127.0.0.1:5000/users/logout', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
       });
     } catch (error) {
       console.error('Logout error:', error);
