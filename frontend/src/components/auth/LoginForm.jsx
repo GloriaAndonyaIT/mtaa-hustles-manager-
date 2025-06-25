@@ -37,7 +37,6 @@ const LoginForm = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
         body: JSON.stringify({
           username: formData.username,
@@ -52,6 +51,7 @@ const LoginForm = () => {
         throw new Error(data.error || data.message || 'Invalid username or password');
       }
 
+      // Store the token and user data
       const success = await login(data.access_token);
       if (success) {
         navigate(data.user?.is_admin ? '/admin/dashboard' : '/dashboard');

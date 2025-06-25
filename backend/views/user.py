@@ -424,3 +424,89 @@ def admin_view_users():
             })
     
     return jsonify(users_list), 200
+
+
+
+
+# ADMIN: GET ALL USERS WITH DETAILS
+@user_bp.route("/admin/users", methods=["GET"])
+@jwt_required()
+def admin_get_all_users():
+    current_user = get_current_user()
+    if not current_user or not current_user.is_admin:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    users = User.query.all()
+    users_list = []
+    for user in users:
+        user_dict = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "is_admin": user.is_admin,
+            "is_suspended": user.is_suspended,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "updated_at": user.updated_at.isoformat() if user.updated_at else None
+        }
+        users_list.append(user_dict)
+    
+    return jsonify(users_list), 200
+
+# ADMIN: TOGGLE USER SUSPENSION STATUS
+@user_bp.route("/admin/users/<int:user_id>/status", methods=["PUT"])
+@jwt_required()
+def admin_toggle_user_status(user_id):
+    current_user = get_current_user()
+    if not current_user or not current_user.is_admin:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.get_json()
+    if not data or "is_suspended" not in data:
+        return jsonify({"error": "Missing is_suspended field"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    try:
+        user.is_suspended = data["is_suspended"]
+        user.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "is_admin": user.is_admin,
+                "is_suspended": user.is_suspended
+            }
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating user status: {str(e)}")
+        return jsonify({"error": "Failed to update user status"}), 500
+
+# ADMIN: DELETE USER
+@user_bp.route("/admin/users/<int:user_id>", methods=["DELETE"])
+@jwt_required()
+def admin_delete_user(user_id):
+    current_user = get_current_user()
+    if not current_user or not current_user.is_admin:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    try:
+        # Delete associated data (transactions, hustles, debts, etc.)
+        # Add cascade deletes in your models for automatic deletion
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"success": True, "message": "User deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting user: {str(e)}")
+        return jsonify({"error": "Failed to delete user"}), 500

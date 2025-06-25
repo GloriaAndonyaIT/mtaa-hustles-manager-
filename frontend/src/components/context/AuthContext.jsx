@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const login = async (token) => {
+const login = async (token) => {
     try {
       localStorage.setItem('access_token', token);
       setToken(token);
@@ -61,6 +61,7 @@ export const AuthProvider = ({ children }) => {
       return false;
     } catch (error) {
       console.error('Failed to fetch user data:', error);
+      localStorage.removeItem('access_token');
       return false;
     }
   };

@@ -13,6 +13,9 @@ import HustleDetailPage from './pages/HustleDetailPage';
 import TransactionForm from './components/hustles/TransactionForm';
 import HustleForm from './components/hustles/HustleForm';
 import Debt from './pages/Debt';
+import SettingsPage from "./pages/SettingsPage";
+
+
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user, isAuthenticated } = useAuth();
@@ -167,6 +170,19 @@ function AppContent() {
           </AppLayout>
         </ProtectedRoute>
       } />
+
+
+
+      <Route path="/settings" element={
+  <ProtectedRoute>
+    <AppLayout>
+      <SettingsPage />
+    </AppLayout>
+  </ProtectedRoute>
+} />
+
+
+
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

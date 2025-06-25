@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import check_password_hash
 from models import db, User
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, create_refresh_token
+from datetime import datetime, timedelta
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -39,13 +40,13 @@ def login():
                 "username": user.username,
                 "email": user.email,
                 "is_admin": user.is_admin
-            }
+            },
+            "message": "Login successful"
         }), 200
 
     except Exception as e:
         current_app.logger.error(f"Login error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
-
 # Logout
 @auth_bp.route("/logout", methods=["DELETE"])
 @jwt_required()
