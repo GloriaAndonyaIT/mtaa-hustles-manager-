@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (token) => {
-    localStorage.setItem('access_token', token);
+    localStorage.setItem('token', token);
     setToken(token);
     
     try {
