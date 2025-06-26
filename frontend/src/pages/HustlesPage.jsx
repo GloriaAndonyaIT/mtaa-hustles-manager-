@@ -21,18 +21,18 @@ const HustlesPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Add debugging and better validation
+     
       console.log('API response:', response.data);
       
-      // Ensure we always set an array
+     
       const hustlesData = response.data;
       if (Array.isArray(hustlesData)) {
         setHustles(hustlesData);
       } else if (hustlesData && Array.isArray(hustlesData.hustles)) {
-        // In case the API returns { hustles: [...] }
+       
         setHustles(hustlesData.hustles);
       } else if (hustlesData && Array.isArray(hustlesData.data)) {
-        // In case the API returns { data: [...] }
+       
         setHustles(hustlesData.data);
       } else {
         console.warn('API response is not an array:', hustlesData);
@@ -41,7 +41,7 @@ const HustlesPage = () => {
     } catch (err) {
       console.error('Fetch hustles error:', err);
       toast.error(err.response?.data?.error || 'Failed to fetch hustles');
-      setHustles([]); // Ensure it's always an array
+      setHustles([]); 
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ const HustlesPage = () => {
     if (token) fetchHustles();
   }, [token]);
 
-  // Add a safety check before rendering
+  
   const hustlesList = Array.isArray(hustles) ? hustles : [];
 
   return (

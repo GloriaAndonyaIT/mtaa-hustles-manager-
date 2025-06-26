@@ -16,19 +16,20 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     is_verified = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
- 
+    is_suspended = db.Column(db.Boolean, default=False)  
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     reset_token = db.Column(db.String(100), nullable=True)
     reset_token_expires = db.Column(db.DateTime, nullable=True)
-    is_verified = db.Column(db.Boolean, default=False)
     verification_token = db.Column(db.String(100), nullable=True)
+
 
     # relationships
     hustles = db.relationship('Hustle', backref='user', lazy=True)
     transactions = db.relationship('Transaction', backref='user', lazy=True)
-    debts = db.relationship('Debt', backref='user', lazy=True)
-    goals = db.relationship('Goal', backref='user', lazy=True)
+    
+    
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -58,7 +59,7 @@ class User(db.Model):
             'hustles_count': len(self.hustles),
             'transactions_count': len(self.transactions),
             'debts_count': len(self.debts),
-            'goals_count': len(self.goals)
+            
         }
 
 
@@ -79,8 +80,8 @@ class Hustle(db.Model):
     type = db.Column(db.String(50), nullable=False)  # e.g., 'side hustle', 'investment'
     description = db.Column(db.String(200), nullable=True)
     date = db.Column(db.Date, nullable=False)
-    location = db.Column(db.String(100), nullable=True)  # ✅ Add this
-    status = db.Column(db.String(20), default='active')  # ✅ Add this
+    location = db.Column(db.String(100), nullable=True)  
+    status = db.Column(db.String(20), default='active')  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -88,7 +89,7 @@ class Hustle(db.Model):
     # Relationships
     transactions = db.relationship('Transaction', backref='hustle', lazy=True)
     debts = db.relationship('Debt', backref='hustle', lazy=True)
-    goals = db.relationship('Goal', backref='hustle', lazy=True)
+   
 
     def __repr__(self):
         return f"<Hustle {self.id} - {self.title}>"
@@ -100,8 +101,8 @@ class Hustle(db.Model):
             'type': self.type,
             'description': self.description,
             'date': self.date.isoformat() if self.date else None,
-            'location': self.location,  # ✅ Include this
-            'status': self.status,      # ✅ Include this
+            'location': self.location, 
+            'status': self.status,     
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'user_id': self.user_id,
@@ -123,10 +124,11 @@ class Transaction(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     hustle_id = db.Column(db.Integer, db.ForeignKey('hustles.id'), nullable=True)
 
-    # ✅ Add these if you use them
+
+
     category = db.Column(db.String(100))
     notes = db.Column(db.Text)
-    tags = db.Column(db.String(255))  # You’re storing tags as comma-separated string
+    tags = db.Column(db.String(255))  
 
     def to_dict(self):
         return {
@@ -175,31 +177,3 @@ class Debt(db.Model):
         }
 
 
-class Goal(db.Model):
-    __tablename__ = 'goals'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(200), nullable=False)
-    status = db.Column(db.String(50), nullable=False)  # e.g., 'active', 'completed'
-    due_date = db.Column(db.DateTime, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    hustle_id = db.Column(db.Integer, db.ForeignKey('hustles.id'), nullable=True)
-
-
-    def to_dict(self):
-        return {
-        "id": self.id,
-        "title": self.title,
-        "description": self.description,
-        "status": self.status,
-        "due_date": self.due_date.isoformat() if self.due_date else None,
-        "user_id": self.user_id,
-        "hustle_id": self.hustle_id,
-        "hustle_title": self.hustle.title if self.hustle else None,
-        "created_at": self.created_at.isoformat() if self.created_at else None,
-        "updated_at": self.updated_at.isoformat() if self.updated_at else None
-    }

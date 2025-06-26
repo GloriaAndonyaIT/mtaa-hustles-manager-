@@ -46,7 +46,7 @@ def create_transaction():
         if t_type.lower() not in ['income', 'expense']:
             return jsonify({"error": "Type must be either 'income' or 'expense'"}), 400
 
-        # Parse date if provided
+      
         if date_str:
             try:
                 created_at = datetime.strptime(date_str, "%Y-%m-%d")
@@ -55,7 +55,7 @@ def create_transaction():
         else:
             created_at = datetime.utcnow()
 
-        # Validate hustle_id if provided
+        
         if hustle_id:
             hustle = Hustle.query.get(hustle_id)
             if not hustle:
@@ -123,7 +123,7 @@ def get_all_transactions():
         if not current_user:
             return jsonify({"error": "Unauthorized"}), 401
 
-        # Get query parameters for filtering
+
         hustle_id = request.args.get('hustle_id')
         t_type = request.args.get('type')  # 'income' or 'expense'
         start_date = request.args.get('start_date')

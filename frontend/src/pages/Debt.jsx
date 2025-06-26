@@ -24,7 +24,7 @@ const Debt = () => {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  // Format currency for Kenyan Shillings
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',

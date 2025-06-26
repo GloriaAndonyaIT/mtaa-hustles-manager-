@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import FormInput from '../auth/FormInput';
 import FormButton from '../auth/FormButton';
 import ErrorMessage from '../auth/ErrorMessage';
-import config from "../../config.json"; // ✅ keep this
+import config from "../../config.json"; 
 
 const SignupForm = () => {
   const [formData, setFormData] = useState({ 

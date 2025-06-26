@@ -69,14 +69,14 @@ const DashboardOverview = () => {
         const hustlesData = await hustlesResponse.json();
         const transactionsData = await transactionsResponse.json();
 
-        // Ensure we have arrays to work with
+       
         const safeHustles = Array.isArray(hustlesData) ? hustlesData : 
                           (hustlesData.hustles || hustlesData.data || []);
         
         const safeTransactions = Array.isArray(transactionsData) ? transactionsData : 
                               (transactionsData.transactions || transactionsData.data || []);
 
-        // Process the data to create dashboard metrics
+       
         const processedData = processDashboardData(safeHustles, safeTransactions);
         setDashboardData(processedData);
       } catch (error) {

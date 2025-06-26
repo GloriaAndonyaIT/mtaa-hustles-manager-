@@ -9,7 +9,7 @@ import config from '../../config.json';
 const TransactionForm = ({ hustle }) => {
   const { id, transactionId } = useParams();
   const navigate = useNavigate();
-  const { user, token } = useAuth(); // Get token from auth context
+  const { user, token } = useAuth(); 
   
   const isEditing = !!transactionId;
   const [formData, setFormData] = useState({
@@ -65,7 +65,7 @@ const TransactionForm = ({ hustle }) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Clear error when field is edited
+    
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -112,7 +112,7 @@ const TransactionForm = ({ hustle }) => {
       hustle_id: id
     };
 
-    // Debug logs
+    
     console.log('isEditing:', isEditing);
     console.log('transactionId:', transactionId);
     console.log('config.api_url:', config.api_url);

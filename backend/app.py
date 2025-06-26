@@ -103,7 +103,6 @@ from views.user import user_bp
 from views.debt import debt_bp
 from views.hustle import hustle_bp
 from views.transactions import transaction_bp
-from views.goal import goal_bp
 from views.auth import auth_bp
 from views.dashboard import dashboard_bp
 
@@ -111,7 +110,7 @@ app.register_blueprint(user_bp)
 app.register_blueprint(debt_bp)
 app.register_blueprint(hustle_bp)
 app.register_blueprint(transaction_bp)
-app.register_blueprint(goal_bp)
+
 app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp)
 

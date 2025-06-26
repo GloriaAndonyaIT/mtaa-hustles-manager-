@@ -783,23 +783,23 @@ const fetchHustleDetails = async () => {
       timeout: 10000
     };
 
-    // Fetch hustle
+    
     const hustleResponse = await axios.get(`${config.api_url}/hustles/${id}`, axiosConfig);
     
-    // Handle both possible response formats
+   
     let hustleData = hustleResponse.data?.hustle || hustleResponse.data;
     
     if (!hustleData?.id) {
       throw new Error('Invalid hustle data format');
     }
 
-    // Ensure status is set (default to 'active' if not provided)
+   
     setHustle({
       ...hustleData,
       status: hustleData.status || 'active'
     });
 
-    // Fetch transactions
+   
     const transactionsResponse = await axios.get(
       `${config.api_url}/hustles/${id}/transactions`, 
       axiosConfig

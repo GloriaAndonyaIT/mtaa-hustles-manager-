@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, Blueprint, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Hustle, Transaction, Debt, Goal
+from models import db, User, Hustle, Transaction, Debt
 import secrets
 from datetime import datetime, timedelta
 from flask_mail import Message, Mail
@@ -302,36 +302,53 @@ def delete_user(user_id):
 @jwt_required()
 def admin_get_users():
     try:
+        # Debug: Log incoming request
+        current_app.logger.debug("Received request for /admin/users")
+        
         current_user = get_current_user()
         
         if not current_user:
-            current_app.logger.error("No current user found - invalid JWT?")
+            current_app.logger.error("JWT validation failed - no current user")
             return jsonify({"error": "Authentication required"}), 401
             
         if not current_user.is_admin:
-            current_app.logger.warning(f"Non-admin user {current_user.id} attempted to access admin endpoint")
+            current_app.logger.warning(f"Access denied for user {current_user.id} - not admin")
             return jsonify({"error": "Admin access required"}), 403
         
-        current_app.logger.info(f"Admin user {current_user.id} accessing user list")
+        current_app.logger.info(f"Admin access granted for user {current_user.id}")
+        
+        # Debug: Before database query
+        current_app.logger.debug("Attempting to query all users from database")
         
         users = User.query.all()
         
-        users_data = [{
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "is_admin": user.is_admin,
-            "is_suspended": user.is_suspended,
-            "created_at": user.created_at.isoformat() if user.created_at else None
-        } for user in users]
+        # Debug: After query but before serialization
+        current_app.logger.debug(f"Found {len(users)} users")
         
+        users_data = []
+        for user in users:
+            try:
+                user_data = {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "is_admin": user.is_admin,
+                    "is_suspended": user.is_suspended,
+                    "created_at": user.created_at.isoformat() if user.created_at else None
+                }
+                users_data.append(user_data)
+            except Exception as serialize_error:
+                current_app.logger.error(f"Error serializing user {user.id}: {str(serialize_error)}")
+                continue
+        
+        current_app.logger.debug("Successfully prepared response data")
         return jsonify(users_data), 200
         
     except Exception as e:
-        current_app.logger.error(f"Critical error in admin_get_users: {str(e)}", exc_info=True)
+        current_app.logger.critical(f"Unhandled exception in admin_get_users: {str(e)}", exc_info=True)
         return jsonify({
             "error": "Internal server error",
-            "message": "An unexpected error occurred"
+            "message": str(e)  # Include actual error message for debugging
         }), 500
 
 @user_bp.route("/admin/users/<int:user_id>/status", methods=["PUT"])
