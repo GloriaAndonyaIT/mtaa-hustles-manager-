@@ -9,9 +9,11 @@ flask-sqlalchemy = "*"
 flask-jwt-extended = "*"
 python-dotenv = "*"
 werkzeug = "*"
-flask-migrate = "*"
 flask-cors = "*"
 flask-mail = "*"
+psycopg2-binary = "*"
+flask-migrate = "*"
+gunicorn = "*"
 
 [dev-packages]
 

@@ -16,7 +16,7 @@ app.config.update(
     SECRET_KEY='ftyhjksytdfgj',
 
     # Database
-    SQLALCHEMY_DATABASE_URI='sqlite:///app.db',
+    SQLALCHEMY_DATABASE_URI=   'postgresql://mtaa_hustle_manager_db_user:hq9qUndZs1Biak3tyOY3lllXSzcfNY0b@dpg-d1eq6t8dl3ps73bvp4sg-a.oregon-postgres.render.com/mtaa_hustle_manager_db',
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
 
     # JWT config
