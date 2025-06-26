@@ -5,7 +5,6 @@ from flask_migrate import Migrate
 from flask_mail import Mail
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-
 from models import db, TokenBlocklist
 
 # Create Flask app
@@ -14,17 +13,14 @@ app = Flask(__name__)
 # Configuration
 app.config.update(
     SECRET_KEY='ftyhjksytdfgj',
-
     # Database
-    SQLALCHEMY_DATABASE_URI=   'postgresql://mtaa_hustle_manager_db_user:hq9qUndZs1Biak3tyOY3lllXSzcfNY0b@dpg-d1eq6t8dl3ps73bvp4sg-a.oregon-postgres.render.com/mtaa_hustle_manager_db',
+    SQLALCHEMY_DATABASE_URI='postgresql://mtaa_hustle_manager_db_user:hq9qUndZs1Biak3tyOY3lllXSzcfNY0b@dpg-d1eq6t8dl3ps73bvp4sg-a.oregon-postgres.render.com/mtaa_hustle_manager_db',
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
-
     # JWT config
     JWT_SECRET_KEY='fghhhhaszdxfcwaesrdgdf',
     JWT_ACCESS_TOKEN_EXPIRES=timedelta(hours=1),
     JWT_REFRESH_TOKEN_EXPIRES=timedelta(days=30),
     JWT_TOKEN_LOCATION=['headers', 'cookies'],
-
     # Mail
     MAIL_SERVER='smtp.gmail.com',
     MAIL_PORT=587,
@@ -33,9 +29,8 @@ app.config.update(
     MAIL_USERNAME='testandonya@gmail.com',
     MAIL_PASSWORD='aoyq bwra hely tser',
     MAIL_DEFAULT_SENDER='testandonya@gmail.com',
-
-    # Frontend URL
-    FRONTEND_URL='http://localhost:5173'
+    # Frontend URL - Updated to Vercel deployment
+    FRONTEND_URL='https://mtaa-hustles-manager-jwfe.vercel.app'
 )
 
 # Initialize extensions
@@ -44,20 +39,20 @@ mail = Mail(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
 
-# Improved CORS configuration
+# CORS configuration for production
 CORS(app, 
-     origins=["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"],
+     origins=["https://mtaa-hustles-manager-jwfe.vercel.app"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      supports_credentials=True,
      send_wildcard=False)
 
-# Add a before_request handler to ensure CORS headers are always present
+# CORS preflight handler for production
 @app.before_request
 def before_request():
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'OK'})
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+        response.headers.add('Access-Control-Allow-Origin', 'https://mtaa-hustles-manager-jwfe.vercel.app')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
@@ -110,7 +105,6 @@ app.register_blueprint(user_bp)
 app.register_blueprint(debt_bp)
 app.register_blueprint(hustle_bp)
 app.register_blueprint(transaction_bp)
-
 app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp)
 
