@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import { Briefcase, PlusCircle, Trash2, ArrowRight } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import config from "../config.json"; 
 
 const HustlesPage = () => {
   const { token } = useAuth();
@@ -16,7 +17,7 @@ const HustlesPage = () => {
   const fetchHustles = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://127.0.0.1:5000/hustles', {
+      const response = await axios.get(`${config.api_url}/hustles`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -48,7 +49,7 @@ const HustlesPage = () => {
 
   const deleteHustle = async (id) => {
     try {
-      await axios.delete(`http://127.0.0.1:5000/hustles/${id}`, {
+      await axios.delete(`${config.api_url}/hustles/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setHustles(prev => prev.filter(h => h.id !== id));

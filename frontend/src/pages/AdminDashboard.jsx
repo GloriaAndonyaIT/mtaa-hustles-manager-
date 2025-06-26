@@ -50,6 +50,7 @@ import {
   Delete as DeleteIcon,
   Search as SearchIcon
 } from '@mui/icons-material';
+import config from "../config.json";
 
 // Register ChartJS components
 ChartJS.register(
@@ -91,6 +92,7 @@ const AdminDashboard = () => {
   
   // State for UI
   const [loading, setLoading] = useState(true);
+  const [apiErrors, setApiErrors] = useState({});
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
@@ -105,131 +107,197 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (!isAdmin) {
       navigate('/');
+      setSnackbar({
+        open: true,
+        message: 'Admin access required',
+        severity: 'error'
+      });
     } else {
       fetchAllData();
     }
   }, [isAdmin, navigate]);
   
   // Filter data when search term changes
-  // In your useEffect for filtering data, replace the current code with this:
-
-useEffect(() => {
-  if (searchTerm) {
-    const term = searchTerm.toLowerCase();
-    setFilteredUsers(users.filter(u => 
-      u.username.toLowerCase().includes(term) || 
-      u.email.toLowerCase().includes(term)
-    ));
-    setFilteredHustles(hustles.filter(h => 
-      h.title.toLowerCase().includes(term) || 
-      h.description.toLowerCase().includes(term)
-    ));
-    setFilteredTransactions(transactions.filter(t => 
-      t.description.toLowerCase().includes(term) || 
-      t.type.toLowerCase().includes(term)
-    ));
-    setFilteredDebts(debts.filter(d => 
-      d.description.toLowerCase().includes(term) || 
-      d.creditor.toLowerCase().includes(term)
-    ));
-  } else {
-    setFilteredUsers(users);
-    setFilteredHustles(hustles);
-    setFilteredTransactions(transactions);
-    setFilteredDebts(debts);
-  }
-}, [searchTerm, users, hustles, transactions, debts]);
-  
-  // Fetch all data from API
-  const fetchAllData = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch all data in parallel
-      const [usersRes, hustlesRes, transactionsRes, debtsRes] = await Promise.all([
-        fetch('http://127.0.0.1:5000/admin/users', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        }),
-        fetch('http://127.0.0.1:5000/hustles', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        }),
-        fetch('http://127.0.0.1:5000/transactions', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        }),
-        fetch('http://127.0.0.1:5000/debts', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        })
-      ]);
-      
-      // Parse responses
-      const usersData = await usersRes.json();
-      const hustlesData = await hustlesRes.json();
-      const transactionsData = await transactionsRes.json();
-      const debtsData = await debtsRes.json();
-      
-      // Set state
-      setUsers(usersData);
-      setFilteredUsers(usersData);
-      setHustles(hustlesData.hustles || []);
-      setFilteredHustles(hustlesData.hustles || []);
-      setTransactions(transactionsData.transactions || []);
-      setFilteredTransactions(transactionsData.transactions || []);
-      setDebts(debtsData.debts || []);
-      setFilteredDebts(debtsData.debts || []);
-      
-      // Calculate stats
-      calculateStats(
-        usersData,
-        hustlesData.hustles || [],
-        transactionsData.transactions || [],
-        debtsData.debts || []
-      );
-      
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to fetch data',
-        severity: 'error'
-      });
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      setFilteredUsers(users.filter(u => 
+        u.username.toLowerCase().includes(term) || 
+        u.email.toLowerCase().includes(term)
+      ))
+      setFilteredHustles(hustles.filter(h => 
+        h.title.toLowerCase().includes(term) || 
+        h.description.toLowerCase().includes(term)
+      ))
+      setFilteredTransactions(transactions.filter(t => 
+        t.description.toLowerCase().includes(term) || 
+        t.type.toLowerCase().includes(term)
+      ))
+      setFilteredDebts(debts.filter(d => 
+        d.description.toLowerCase().includes(term) || 
+        d.creditor.toLowerCase().includes(term)
+      ));
+    } else {
+      setFilteredUsers(users);
+      setFilteredHustles(hustles);
+      setFilteredTransactions(transactions);
+      setFilteredDebts(debts);
     }
+  }, [searchTerm, users, hustles, transactions, debts]);
+  
+  // Fetch all data from API with improved error handling
+const fetchAllData = async () => {
+  try {
+    setLoading(true);
+    setApiErrors({});
+    
+    const token = localStorage.getItem('access_token');
+    console.log('Current token:', token);
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    const headers = {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json' // Explicitly request JSON
   };
+
+    // Fetch users with improved error handling
+    const usersResponse = await fetch(`${config.api_url}/admin/users`, { headers });
+    
+    // Check if response is HTML (error page)
+    const contentType = usersResponse.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+      const errorText = await usersResponse.text();
+      throw new Error(`Server returned HTML error page: ${usersResponse.status}`);
+    }
+    
+    if (!usersResponse.ok) {
+      // Try to parse as JSON first
+      try {
+        const errorData = await usersResponse.json();
+        throw new Error(errorData.error || `Failed to fetch users: ${usersResponse.status}`);
+      } catch (jsonError) {
+        // Fall back to text if not JSON
+        const errorText = await usersResponse.text();
+        throw new Error(`Failed to fetch users: ${usersResponse.status} - ${errorText}`);
+      }
+    }
+    
+    const usersData = await usersResponse.json();
+    setUsers(usersData);
+    setFilteredUsers(usersData);
+
+      try {
+        // Fetch hustles
+        const hustlesResponse = await fetch(`${config.api_url}/hustles`, { headers });
+        if (!hustlesResponse.ok) {
+          const errorText = await hustlesResponse.text();
+          throw new Error(`Failed to fetch hustles: ${hustlesResponse.status} ${hustlesResponse.statusText} - ${errorText}`);
+        }
+        const hustlesData = await hustlesResponse.json();
+        setHustles(hustlesData.hustles || []);
+        setFilteredHustles(hustlesData.hustles || []);
+      } catch (hustlesError) {
+        console.error('Hustles fetch error:', hustlesError);
+        setApiErrors(prev => ({ ...prev, hustles: hustlesError.message }));
+      }
+
+      try {
+        // Fetch transactions
+        const transactionsResponse = await fetch(`${config.api_url}/transactions`, { headers });
+        if (!transactionsResponse.ok) {
+          const errorText = await transactionsResponse.text();
+          throw new Error(`Failed to fetch transactions: ${transactionsResponse.status} ${transactionsResponse.statusText} - ${errorText}`);
+        }
+        const transactionsData = await transactionsResponse.json();
+        setTransactions(transactionsData.transactions || []);
+        setFilteredTransactions(transactionsData.transactions || []);
+      } catch (transactionsError) {
+        console.error('Transactions fetch error:', transactionsError);
+        setApiErrors(prev => ({ ...prev, transactions: transactionsError.message }));
+      }
+
+      try {
+        // Fetch debts
+        const debtsResponse = await fetch(`${config.api_url}/debts`, { headers });
+        if (!debtsResponse.ok) {
+          const errorText = await debtsResponse.text();
+          throw new Error(`Failed to fetch debts: ${debtsResponse.status} ${debtsResponse.statusText} - ${errorText}`);
+        }
+        const debtsData = await debtsResponse.json();
+        setDebts(debtsData.debts || []);
+        setFilteredDebts(debtsData.debts || []);
+      } catch (debtsError) {
+        console.error('Debts fetch error:', debtsError);
+        setApiErrors(prev => ({ ...prev, debts: debtsError.message }));
+      }
+
+      // Calculate stats with whatever data we have
+      calculateStats(
+        users,
+        hustles,
+        transactions,
+        debts
+      );
+
+  } catch (error) {
+    console.error('Main fetch error:', error);
+    
+    let errorMessage = 'Failed to fetch data';
+    if (error.message.includes('403')) {
+      errorMessage = 'Admin privileges required';
+      navigate('/');
+    } else if (error.message.includes('401')) {
+      errorMessage = 'Session expired - please login again';
+      navigate('/login');
+    } else if (error.message.includes('500')) {
+      errorMessage = 'Server error - please try again later';
+    }
+
+    setSnackbar({
+      open: true,
+      message: errorMessage,
+      severity: 'error'
+    });
+    
+  } finally {
+    setLoading(false);
+  }
+};
   
   // Calculate statistics
   const calculateStats = (users, hustles, transactions, debts) => {
-    const totalIncome = transactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-      
-    const totalExpenses = transactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-      
-    setStats({
-      totalUsers: users.length,
-      activeUsers: users.filter(u => !u.is_suspended).length,
-      totalHustles: hustles.length,
-      totalTransactions: transactions.length,
-      totalIncome,
-      totalExpenses,
-      totalDebts: debts.reduce((sum, d) => sum + d.amount, 0)
-    });
+    try {
+      const totalIncome = transactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+        
+      const totalExpenses = transactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+        
+      setStats({
+        totalUsers: users.length,
+        activeUsers: users.filter(u => !u.is_suspended).length,
+        totalHustles: hustles.length,
+        totalTransactions: transactions.length,
+        totalIncome,
+        totalExpenses,
+        totalDebts: debts.reduce((sum, d) => sum + d.amount, 0)
+      });
+    } catch (error) {
+      console.error('Error calculating stats:', error);
+    }
   };
   
   // Toggle user suspension status
   const toggleUserStatus = async (userId, isSuspended) => {
     try {
-      const response = await fetch(`http://127.0.0.1:5000/admin/users/${userId}/status`, {
+      setLoading(true);
+      const response = await fetch(`${config.api_url}/admin/users/${userId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -246,23 +314,28 @@ useEffect(() => {
           message: `User ${isSuspended ? 'activated' : 'suspended'} successfully`,
           severity: 'success'
         });
+        fetchAllData(); // Refresh data
       } else {
-        throw new Error('Failed to update user status');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update user status');
       }
     } catch (error) {
       console.error('Error updating user status:', error);
       setSnackbar({
         open: true,
-        message: 'Failed to update user status',
+        message: error.message || 'Failed to update user status',
         severity: 'error'
       });
+    } finally {
+      setLoading(false);
     }
   };
   
   // Delete a user
   const deleteUser = async (userId) => {
     try {
-      const response = await fetch(`http://127.0.0.1:5000/admin/users/${userId}`, {
+      setLoading(true);
+      const response = await fetch(`${config.api_url}/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -276,16 +349,20 @@ useEffect(() => {
           message: 'User deleted successfully',
           severity: 'success'
         });
+        fetchAllData(); // Refresh data
       } else {
-        throw new Error('Failed to delete user');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete user');
       }
     } catch (error) {
       console.error('Error deleting user:', error);
       setSnackbar({
         open: true,
-        message: 'Failed to delete user',
+        message: error.message || 'Failed to delete user',
         severity: 'error'
       });
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -305,7 +382,7 @@ useEffect(() => {
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
-  
+
   // Chart data for dashboard
   const usersChartData = {
     labels: ['Total Users', 'Active Users', 'Suspended Users'],
@@ -383,10 +460,11 @@ useEffect(() => {
     ],
   };
   
-  if (loading) {
+  if (loading && users.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
         <CircularProgress />
+        <Typography variant="body1" sx={{ ml: 2 }}>Loading dashboard data...</Typography>
       </Box>
     );
   }
@@ -405,8 +483,9 @@ useEffect(() => {
               onClick={fetchAllData}
               startIcon={<RefreshIcon />}
               sx={{ mr: 2 }}
+              disabled={loading}
             >
-              Refresh
+              {loading ? 'Refreshing...' : 'Refresh'}
             </Button>
             <Button 
               variant="outlined" 
@@ -424,6 +503,7 @@ useEffect(() => {
             variant={activeTab === 'dashboard' ? 'contained' : 'text'}
             onClick={() => setActiveTab('dashboard')}
             sx={{ mr: 2 }}
+            disabled={loading}
           >
             Dashboard
           </Button>
@@ -431,6 +511,7 @@ useEffect(() => {
             variant={activeTab === 'users' ? 'contained' : 'text'}
             onClick={() => setActiveTab('users')}
             sx={{ mr: 2 }}
+            disabled={loading}
           >
             Users
           </Button>
@@ -438,6 +519,7 @@ useEffect(() => {
             variant={activeTab === 'hustles' ? 'contained' : 'text'}
             onClick={() => setActiveTab('hustles')}
             sx={{ mr: 2 }}
+            disabled={loading}
           >
             Hustles
           </Button>
@@ -445,16 +527,38 @@ useEffect(() => {
             variant={activeTab === 'transactions' ? 'contained' : 'text'}
             onClick={() => setActiveTab('transactions')}
             sx={{ mr: 2 }}
+            disabled={loading}
           >
             Transactions
           </Button>
           <Button
             variant={activeTab === 'debts' ? 'contained' : 'text'}
             onClick={() => setActiveTab('debts')}
+            disabled={loading}
           >
             Debts
           </Button>
         </Box>
+        
+        {/* Error display for failed API calls */}
+        {Object.keys(apiErrors).length > 0 && (
+          <Box sx={{ mb: 3 }}>
+            {Object.entries(apiErrors).map(([key, error]) => (
+              <Alert severity="error" key={key} sx={{ mb: 1 }}>
+                Failed to load {key}: {error}
+              </Alert>
+            ))}
+            <Button 
+              variant="outlined" 
+              color="error" 
+              onClick={fetchAllData}
+              startIcon={<RefreshIcon />}
+              size="small"
+            >
+              Retry Failed Requests
+            </Button>
+          </Box>
+        )}
         
         {/* Search Bar */}
         {activeTab !== 'dashboard' && (
@@ -468,6 +572,7 @@ useEffect(() => {
               InputProps={{
                 startAdornment: <SearchIcon sx={{ mr: 1 }} />
               }}
+              disabled={loading}
             />
           </Box>
         )}
@@ -556,194 +661,265 @@ useEffect(() => {
         
         {/* Users Tab */}
         {activeTab === 'users' && (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Username</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Admin</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.id}</TableCell>
-                    <TableCell>{user.username}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={user.is_suspended ? 'Suspended' : 'Active'} 
-                        color={user.is_suspended ? 'error' : 'success'} 
-                        size="small" 
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={user.is_admin ? 'Yes' : 'No'} 
-                        color={user.is_admin ? 'primary' : 'default'} 
-                        size="small" 
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        size="small" 
-                        onClick={() => viewUserDetails(user)}
-                        sx={{ mr: 1 }}
-                      >
-                        View
-                      </Button>
-                      <Button 
-                        size="small" 
-                        color={user.is_suspended ? 'success' : 'error'}
-                        startIcon={user.is_suspended ? <CheckIcon /> : <BlockIcon />}
-                        onClick={() => toggleUserStatus(user.id, user.is_suspended)}
-                        sx={{ mr: 1 }}
-                      >
-                        {user.is_suspended ? 'Activate' : 'Suspend'}
-                      </Button>
-                      <Button 
-                        size="small" 
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => deleteUser(user.id)}
-                      >
-                        Delete
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <>
+            {loading && filteredUsers.length === 0 ? (
+              <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
+                <CircularProgress />
+                <Typography variant="body1" sx={{ ml: 2 }}>Loading users...</Typography>
+              </Box>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>ID</TableCell>
+                      <TableCell>Username</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Admin</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredUsers.length > 0 ? (
+                      filteredUsers.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell>{user.id}</TableCell>
+                          <TableCell>{user.username}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={user.is_suspended ? 'Suspended' : 'Active'} 
+                              color={user.is_suspended ? 'error' : 'success'} 
+                              size="small" 
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={user.is_admin ? 'Yes' : 'No'} 
+                              color={user.is_admin ? 'primary' : 'default'} 
+                              size="small" 
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              size="small" 
+                              onClick={() => viewUserDetails(user)}
+                              sx={{ mr: 1 }}
+                              disabled={loading}
+                            >
+                              View
+                            </Button>
+                            <Button 
+                              size="small" 
+                              color={user.is_suspended ? 'success' : 'error'}
+                              startIcon={user.is_suspended ? <CheckIcon /> : <BlockIcon />}
+                              onClick={() => toggleUserStatus(user.id, user.is_suspended)}
+                              sx={{ mr: 1 }}
+                              disabled={loading}
+                            >
+                              {user.is_suspended ? 'Activate' : 'Suspend'}
+                            </Button>
+                            <Button 
+                              size="small" 
+                              color="error"
+                              startIcon={<DeleteIcon />}
+                              onClick={() => deleteUser(user.id)}
+                              disabled={loading}
+                            >
+                              Delete
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          {apiErrors.users ? 'Failed to load users' : 'No users found'}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </>
         )}
         
         {/* Hustles Tab */}
         {activeTab === 'hustles' && (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Title</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>User</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Description</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredHustles.map((hustle) => (
-                  <TableRow key={hustle.id}>
-                    <TableCell>{hustle.id}</TableCell>
-                    <TableCell>{hustle.title}</TableCell>
-                    <TableCell>
-                      <Chip label={hustle.type} size="small" />
-                    </TableCell>
-                    <TableCell>
-                      {users.find(u => u.id === hustle.user_id)?.username || 'Unknown'}
-                    </TableCell>
-                    <TableCell>{new Date(hustle.date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Typography noWrap sx={{ maxWidth: 200 }}>
-                        {hustle.description}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <>
+            {loading && filteredHustles.length === 0 ? (
+              <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
+                <CircularProgress />
+                <Typography variant="body1" sx={{ ml: 2 }}>Loading hustles...</Typography>
+              </Box>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>ID</TableCell>
+                      <TableCell>Title</TableCell>
+                      <TableCell>Type</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Description</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredHustles.length > 0 ? (
+                      filteredHustles.map((hustle) => (
+                        <TableRow key={hustle.id}>
+                          <TableCell>{hustle.id}</TableCell>
+                          <TableCell>{hustle.title}</TableCell>
+                          <TableCell>
+                            <Chip label={hustle.type} size="small" />
+                          </TableCell>
+                          <TableCell>
+                            {users.find(u => u.id === hustle.user_id)?.username || 'Unknown'}
+                          </TableCell>
+                          <TableCell>{new Date(hustle.date).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Typography noWrap sx={{ maxWidth: 200 }}>
+                              {hustle.description}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          {apiErrors.hustles ? 'Failed to load hustles' : 'No hustles found'}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </>
         )}
         
         {/* Transactions Tab */}
         {activeTab === 'transactions' && (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Description</TableCell>
-                  <TableCell>User</TableCell>
-                  <TableCell>Date</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{transaction.id}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={transaction.type} 
-                        color={transaction.type === 'income' ? 'success' : 'error'} 
-                        size="small" 
-                      />
-                    </TableCell>
-                    <TableCell>${transaction.amount.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Typography noWrap sx={{ maxWidth: 200 }}>
-                        {transaction.description}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      {users.find(u => u.id === transaction.user_id)?.username || 'Unknown'}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(transaction.created_at).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <>
+            {loading && filteredTransactions.length === 0 ? (
+              <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
+                <CircularProgress />
+                <Typography variant="body1" sx={{ ml: 2 }}>Loading transactions...</Typography>
+              </Box>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>ID</TableCell>
+                      <TableCell>Type</TableCell>
+                      <TableCell>Amount</TableCell>
+                      <TableCell>Description</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>Date</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredTransactions.length > 0 ? (
+                      filteredTransactions.map((transaction) => (
+                        <TableRow key={transaction.id}>
+                          <TableCell>{transaction.id}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={transaction.type} 
+                              color={transaction.type === 'income' ? 'success' : 'error'} 
+                              size="small" 
+                            />
+                          </TableCell>
+                          <TableCell>${transaction.amount.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Typography noWrap sx={{ maxWidth: 200 }}>
+                              {transaction.description}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {users.find(u => u.id === transaction.user_id)?.username || 'Unknown'}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(transaction.created_at).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          {apiErrors.transactions ? 'Failed to load transactions' : 'No transactions found'}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </>
         )}
         
         {/* Debts Tab */}
         {activeTab === 'debts' && (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Creditor</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>User</TableCell>
-                  <TableCell>Due Date</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredDebts.map((debt) => (
-                  <TableRow key={debt.id}>
-                    <TableCell>{debt.id}</TableCell>
-                    <TableCell>${debt.amount.toFixed(2)}</TableCell>
-                    <TableCell>{debt.creditor}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={debt.status} 
-                        color={
-                          debt.status === 'paid' ? 'success' : 
-                          debt.status === 'partially_paid' ? 'warning' : 'error'
-                        } 
-                        size="small" 
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {users.find(u => u.id === debt.user_id)?.username || 'Unknown'}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(debt.due_date).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <>
+            {loading && filteredDebts.length === 0 ? (
+              <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
+                <CircularProgress />
+                <Typography variant="body1" sx={{ ml: 2 }}>Loading debts...</Typography>
+              </Box>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>ID</TableCell>
+                      <TableCell>Amount</TableCell>
+                      <TableCell>Creditor</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>Due Date</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredDebts.length > 0 ? (
+                      filteredDebts.map((debt) => (
+                        <TableRow key={debt.id}>
+                          <TableCell>{debt.id}</TableCell>
+                          <TableCell>${debt.amount.toFixed(2)}</TableCell>
+                          <TableCell>{debt.creditor}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={debt.status} 
+                              color={
+                                debt.status === 'paid' ? 'success' : 
+                                debt.status === 'partially_paid' ? 'warning' : 'error'
+                              } 
+                              size="small" 
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {users.find(u => u.id === debt.user_id)?.username || 'Unknown'}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(debt.due_date).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          {apiErrors.debts ? 'Failed to load debts' : 'No debts found'}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </>
         )}
       </Box>
       

@@ -1,10 +1,10 @@
-// SignupForm.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "../context/AuthContext";
 import FormInput from '../auth/FormInput';
 import FormButton from '../auth/FormButton';
 import ErrorMessage from '../auth/ErrorMessage';
+import config from "../../config.json"; // ✅ keep this
 
 const SignupForm = () => {
   const [formData, setFormData] = useState({ 
@@ -59,18 +59,19 @@ const SignupForm = () => {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          password: formData.password,
-          is_admin: formData.isAdmin
-        })
-      });
+const response = await fetch(`${config.api_url}/users`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    username: `${formData.firstName} ${formData.lastName}`,
+    email: formData.email,
+    password: formData.password,
+    is_admin: formData.isAdmin
+  })
+});
 
       const data = await response.json();
 

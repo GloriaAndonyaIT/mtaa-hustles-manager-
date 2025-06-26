@@ -6,6 +6,7 @@ import DebtItem from '../components/debts/DebtItem';
 import DebtStats from '../components/debts/DebtStats';
 import { FiPlus, FiFilter, FiSearch, FiChevronDown, FiChevronUp, FiEdit, FiTrash2 } from 'react-icons/fi';
 import { format } from 'date-fns';
+import config from '../config.json'; 
 
 const Debt = () => {
   const { user, token } = useAuth();
@@ -46,7 +47,7 @@ const Debt = () => {
         if (value) queryParams.append(key, value);
       });
 
-      const response = await fetch(`http://127.0.0.1:5000/debts?${queryParams.toString()}`, {
+      const response = await fetch(`${config.api_url}/debts?${queryParams.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -68,7 +69,7 @@ const Debt = () => {
   const handleCreateDebt = async (debtData) => {
     try {
       setError(null);
-      const response = await fetch('http://127.0.0.1:5000/debts', {
+      const response = await fetch(`${config.api_url}/debts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,7 +93,7 @@ const Debt = () => {
 const handleUpdateDebt = async (debtId, updatedData, onSuccess) => {
   try {
     setError(null);
-    const response = await fetch(`http://127.0.0.1:5000/debts/${debtId}`, {
+    const response = await fetch(`${config.api_url}/debts/${debtId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -118,7 +119,7 @@ const handleUpdateDebt = async (debtId, updatedData, onSuccess) => {
   const handleDeleteDebt = async (debtId) => {
     try {
       setError(null);
-      const response = await fetch(`http://127.0.0.1:5000/debts/${debtId}`, {
+      const response = await fetch(`${config.api_url}/debts/${debtId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from "../components/context/AuthContext";
 import { useNavigate } from 'react-router-dom';
 import { Settings, LogOut, Trash2, AlertTriangle, X, Check } from 'lucide-react';
+import config from "../config.json";
 
 const SettingsPage = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -27,7 +28,7 @@ const SettingsPage = () => {
     setSuccess(null);
     
     try {
-      const response = await fetch(`http://127.0.0.1:5000/users/${user.id}`, {
+      const response = await fetch(`${config.api_url}/users/${user.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,

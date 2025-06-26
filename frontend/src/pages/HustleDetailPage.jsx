@@ -5,6 +5,7 @@ import { useAuth } from "../components/context/AuthContext";
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
+import config from '../config.json';
 import { 
   Briefcase, MapPin, Calendar, FileText, 
   TrendingUp, TrendingDown, DollarSign, 
@@ -774,37 +775,34 @@ const fetchHustleDetails = async () => {
       throw new Error('Authentication token is missing');
     }
 
-    const config = {
+    const axiosConfig = {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      timeout: 10000 // 10 second timeout
+      timeout: 10000
     };
 
-    // Fetch hustle with error handling
-    const hustleResponse = await axios.get(`http://127.0.0.1:5000/hustles/${id}`, config);
+    // Fetch hustle
+    const hustleResponse = await axios.get(`${config.api_url}/hustles/${id}`, axiosConfig);
     
-    if (!hustleResponse.data?.hustle) {
-      // Check if response is in different format
-      const alternativeData = hustleResponse.data;
-      if (alternativeData?.id) {
-        console.warn('Received direct hustle object, wrapping in "hustle" key');
-        setHustle({
-          ...alternativeData,
-          status: alternativeData.status || 'active'
-        });
-      } else {
-        throw new Error('Invalid hustle data format');
-      }
-    } else {
-      setHustle(hustleResponse.data.hustle);
+    // Handle both possible response formats
+    let hustleData = hustleResponse.data?.hustle || hustleResponse.data;
+    
+    if (!hustleData?.id) {
+      throw new Error('Invalid hustle data format');
     }
+
+    // Ensure status is set (default to 'active' if not provided)
+    setHustle({
+      ...hustleData,
+      status: hustleData.status || 'active'
+    });
 
     // Fetch transactions
     const transactionsResponse = await axios.get(
-      `http://127.0.0.1:5000/hustles/${id}/transactions`, 
-      config
+      `${config.api_url}/hustles/${id}/transactions`, 
+      axiosConfig
     );
     
     setTransactions(transactionsResponse.data?.transactions || []);
@@ -817,7 +815,7 @@ const fetchHustleDetails = async () => {
     });
     
     setError(err.response?.data?.error || err.message || 'Failed to load data');
-    toast.error(error);
+    toast.error(err.response?.data?.error || err.message || 'Failed to load data');
     
   } finally {
     setLoading(false);
@@ -838,7 +836,7 @@ useEffect(() => {
   const addTransaction = async (transaction) => {
     try {
       const response = await axios.post(
-        'http://127.0.0.1:5000/transactions',
+        `${config.api_url}/transactions`,
         { ...transaction, hustle_id: id },
         {
           headers: {
@@ -863,7 +861,7 @@ useEffect(() => {
   const updateTransaction = async (transactionId, updatedTransaction) => {
     try {
       const response = await axios.put(
-        `http://127.0.0.1:5000/transactions/${transactionId}`,
+        `${config.api_url}/transactions/${transactionId}`,
         updatedTransaction,
         {
           headers: {
@@ -890,7 +888,7 @@ useEffect(() => {
   const deleteTransaction = async (transactionId) => {
     try {
       await axios.delete(
-        `http://127.0.0.1:5000/transactions/${transactionId}`,
+        `${config.api_url}/transactions/${transactionId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`

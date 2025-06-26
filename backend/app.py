@@ -1,28 +1,31 @@
 from datetime import timedelta
 from flask import Flask, request, jsonify
-from models import db, TokenBlocklist
+from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
+
+from models import db, TokenBlocklist
 
 # Create Flask app
 app = Flask(__name__)
 
 # Configuration
 app.config.update(
-    # Flask configuration
     SECRET_KEY='ftyhjksytdfgj',
+
+    # Database
     SQLALCHEMY_DATABASE_URI='sqlite:///app.db',
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
-    
-    # JWT configuration
+
+    # JWT config
     JWT_SECRET_KEY='fghhhhaszdxfcwaesrdgdf',
     JWT_ACCESS_TOKEN_EXPIRES=timedelta(hours=1),
     JWT_REFRESH_TOKEN_EXPIRES=timedelta(days=30),
     JWT_TOKEN_LOCATION=['headers', 'cookies'],
-    
-    # Mail configuration
+
+    # Mail
     MAIL_SERVER='smtp.gmail.com',
     MAIL_PORT=587,
     MAIL_USE_TLS=True,
@@ -30,7 +33,7 @@ app.config.update(
     MAIL_USERNAME='testandonya@gmail.com',
     MAIL_PASSWORD='aoyq bwra hely tser',
     MAIL_DEFAULT_SENDER='testandonya@gmail.com',
-    
+
     # Frontend URL
     FRONTEND_URL='http://localhost:5173'
 )
@@ -40,13 +43,36 @@ db.init_app(app)
 mail = Mail(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
-CORS(app, supports_credentials=True, resources={
-    r"/*": {
-        "origins": ["http://localhost:5174", "http://localhost:5173"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+
+# Improved CORS configuration
+CORS(app, 
+     origins=["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     supports_credentials=True,
+     send_wildcard=False)
+
+# Add a before_request handler to ensure CORS headers are always present
+@app.before_request
+def before_request():
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'OK'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+
+# Track if DB was initialized
+db_initialized = False
+
+@app.before_request
+def initialize_db():
+    global db_initialized
+    if not db_initialized:
+        with app.app_context():
+            db.create_all()
+            db_initialized = True
 
 # JWT token blocklist checker
 @jwt.token_in_blocklist_loader
@@ -72,7 +98,7 @@ def missing_token_callback(error):
 def revoked_token_callback(jwt_header, jwt_payload):
     return jsonify({'error': 'Token has been revoked'}), 401
 
-# Import and register blueprints
+# Register blueprints
 from views.user import user_bp
 from views.debt import debt_bp
 from views.hustle import hustle_bp
@@ -81,17 +107,14 @@ from views.goal import goal_bp
 from views.auth import auth_bp
 from views.dashboard import dashboard_bp
 
-app.register_blueprint(user_bp, url_prefix='/users')
-app.register_blueprint(debt_bp, url_prefix='/debts')
-app.register_blueprint(hustle_bp, url_prefix='/hustles')
-app.register_blueprint(transaction_bp, url_prefix='/transactions')
-app.register_blueprint(goal_bp, url_prefix='/goals')
-app.register_blueprint(auth_bp, url_prefix='/auth')
-app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
+app.register_blueprint(user_bp)
+app.register_blueprint(debt_bp)
+app.register_blueprint(hustle_bp)
+app.register_blueprint(transaction_bp)
+app.register_blueprint(goal_bp)
+app.register_blueprint(auth_bp)
+app.register_blueprint(dashboard_bp)
 
-@app.before_first_request
-def create_tables():
-    db.create_all()
-
+# Run app directly
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

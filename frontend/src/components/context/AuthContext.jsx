@@ -1,5 +1,5 @@
 import { createContext, useState, useContext, useEffect } from 'react';
-
+import config from "../../config.json";
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
       const storedToken = localStorage.getItem('access_token');
       if (storedToken) {
         try {
-          const response = await fetch('http://127.0.0.1:5000/users/me', {
+          const response = await fetch(`${config.api_url}/users/me`, {
             headers: {
               'Authorization': `Bearer ${storedToken}`,
               'Content-Type': 'application/json'
@@ -45,7 +45,7 @@ const login = async (token) => {
       localStorage.setItem('access_token', token);
       setToken(token);
       
-      const response = await fetch('http://127.0.0.1:5000/users/me', {
+      const response = await fetch(`${config.api_url}/users/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -68,7 +68,7 @@ const login = async (token) => {
 
   const logout = async () => {
     try {
-      await fetch('http://127.0.0.1:5000/users/logout', {
+      await fetch(`${config.api_url}/users/logout`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

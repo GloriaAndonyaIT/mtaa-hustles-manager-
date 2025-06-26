@@ -1,11 +1,15 @@
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import check_password_hash
-from models import db, User
-from flask_jwt_extended import create_access_token, create_refresh_token
-from datetime import datetime, timedelta
+from flask_jwt_extended import (
+    create_access_token, create_refresh_token,
+    jwt_required, get_jwt
+)
+from datetime import datetime, timedelta, timezone
+from models import db, User, TokenBlocklist
 
 auth_bp = Blueprint('auth', __name__)
 
+# Login Route
 @auth_bp.route("/login", methods=["POST"])
 def login():
     try:
@@ -32,9 +36,11 @@ def login():
             return jsonify({"error": "Invalid username or password"}), 401
 
         access_token = create_access_token(identity=user.id)
+        refresh_token = create_refresh_token(identity=user.id)
         
         return jsonify({
             "access_token": access_token,
+            "refresh_token": refresh_token,
             "user": {
                 "id": user.id,
                 "username": user.username,
@@ -47,14 +53,21 @@ def login():
     except Exception as e:
         current_app.logger.error(f"Login error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
-# Logout
+
+# Logout Route
 @auth_bp.route("/logout", methods=["DELETE"])
 @jwt_required()
-def modify_token():
-    jti = get_jwt()["jti"]
-    now = datetime.now(timezone.utc)
+def logout():
+    try:
+        jti = get_jwt()["jti"]
+        now = datetime.now(timezone.utc)
 
-    new_blocked_token = TokenBlocklist(jti=jti, created_at=now)
-    db.session.add(new_blocked_token)
-    db.session.commit()
-    return jsonify({"success": "Successfully logged out"}), 200
+        new_blocked_token = TokenBlocklist(jti=jti, created_at=now)
+        db.session.add(new_blocked_token)
+        db.session.commit()
+
+        return jsonify({"success": "Successfully logged out"}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Logout error: {str(e)}")
+        return jsonify({"error": "Failed to logout"}), 500

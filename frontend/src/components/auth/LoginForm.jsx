@@ -4,6 +4,7 @@ import { useAuth } from "../../components/context/AuthContext";
 import FormInput from '../auth/FormInput';
 import FormButton from '../auth/FormButton';
 import ErrorMessage from '../auth/ErrorMessage';
+import config from "../../config.json";
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({
@@ -33,7 +34,7 @@ const LoginForm = () => {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/users/login', {
+      const response = await fetch(`${config.api_url}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

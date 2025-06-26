@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
+import config from "../../config.json";
 
 const HustleForm = () => {
   const { token, logout } = useAuth();
@@ -63,36 +64,41 @@ const HustleForm = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!token) {
-      toast.error('You must be logged in to create a hustle!');
-      navigate('/login');
-      return;
+  if (!token) {
+    toast.error('You must be logged in to create a hustle!');
+    navigate('/login');
+    return;
+  }
+
+  if (!validateForm()) return;
+
+  setIsSubmitting(true);
+
+  try {
+    const axiosConfig = {  // Renamed to avoid shadowing
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    };
+
+    // Use the imported config.api_url properly
+    const response = await axios.post(
+      `${config.api_url}/hustles`,  // Fixed URL construction
+      formData,
+      axiosConfig
+    );
+
+    if (response.status === 201) {
+      toast.success('Hustle created successfully!');
+      const hustle = response.data.hustle;
+      navigate(`/hustles/${hustle.id}`, {
+        state: { hustle, isNew: true },
+      });
     }
-
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
-
-    try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
-      const response = await axios.post('http://127.0.0.1:5000/hustles', formData, config);
-
-      if (response.status === 201) {
-        toast.success('Hustle created successfully!');
-        const hustle = response.data.hustle;
-        navigate(`/hustles/${hustle.id}`, {
-          state: { hustle, isNew: true },
-        });
-      }
     } catch (err) {
       console.error('Error creating hustle:', err);
 

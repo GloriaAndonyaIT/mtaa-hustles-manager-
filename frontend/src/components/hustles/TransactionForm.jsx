@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { Loader2, ArrowLeft, Plus, Tag, X } from 'lucide-react';
+import config from '../../config.json'; 
 
 const TransactionForm = ({ hustle }) => {
   const { id, transactionId } = useParams();
@@ -87,68 +88,63 @@ const TransactionForm = ({ hustle }) => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!validateForm()) return;
 
-    // Check if token exists
-    if (!token) {
-      toast.error('Authentication required. Please log in again.');
-      return;
-    }
+  if (!token) {
+    toast.error('Authentication required. Please log in again.');
+    return;
+  }
 
-    setIsSubmitting(true);
-    
-    try {
-      const transactionData = {
-        type: formData.type,
-        amount: Number(formData.amount),
-        description: formData.description,
-        date: formData.date,
-        category: formData.category,
-        notes: formData.notes,
-        tags: formData.tags.join(','),
-        hustle_id: id
-      };
+  setIsSubmitting(true);
+  
+  try {
+    const transactionData = {
+      type: formData.type,
+      amount: Number(formData.amount),
+      description: formData.description,
+      date: formData.date,
+      category: formData.category,
+      notes: formData.notes,
+      tags: formData.tags.join(','),
+      hustle_id: id
+    };
 
-      console.log('Submitting:', transactionData); // Debug
+    // Debug logs
+    console.log('isEditing:', isEditing);
+    console.log('transactionId:', transactionId);
+    console.log('config.api_url:', config.api_url);
 
-      const config = {
+    const url = isEditing 
+      ? `${config.api_url}/transactions/${transactionId}`
+      : `${config.api_url}/transactions`;
+
+    console.log('Final URL:', url);
+
+    const response = await axios[isEditing ? 'put' : 'post'](
+      url,
+      transactionData,
+      {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
-      };
-
-      const url = isEditing 
-        ? `http://127.0.0.1:5000/transactions/${transactionId}`
-        : 'http://127.0.0.1:5000/transactions';
-
-      const method = isEditing ? 'put' : 'post';
-
-      // Debug logging
-      console.log('Token being sent:', token);
-      console.log('Full headers:', config.headers);
-
-      const response = await axios[method](url, transactionData, config);
-      
-      toast.success(`Transaction ${isEditing ? 'updated' : 'added'} successfully`);
-      navigate(`/hustles/${id}`, { state: { refresh: true } });
-
-    } catch (err) {
-      console.error('Full error:', err);
-      
-      // Better error handling
-      if (err.response?.status === 401) {
-        toast.error('Authentication failed. Please log in again.');
-      } else {
-        toast.error(err.response?.data?.error || 'Transaction failed');
       }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    );
+    
+    toast.success(`Transaction ${isEditing ? 'updated' : 'added'} successfully`);
+    navigate(`/hustles/${id}`, { state: { refresh: true } });
+
+  } catch (err) {
+    console.error('Error:', err);
+    console.error('Response:', err.response);
+    toast.error(err.response?.data?.error || 'Transaction failed');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="max-w-2xl mx-auto">

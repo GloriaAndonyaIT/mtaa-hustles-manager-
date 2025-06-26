@@ -14,6 +14,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "../context/AuthContext";
+import config from "../../config.json";
 
 const MPesaTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -48,14 +49,14 @@ const DashboardOverview = () => {
     const fetchDashboardData = async () => {
       try {
         // Fetch hustles data
-        const hustlesResponse = await fetch('http://127.0.0.1:5000/hustles', {
+        const hustlesResponse = await fetch(`${config.api_url}/hustles`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         
         // Fetch transactions data
-        const transactionsResponse = await fetch('http://127.0.0.1:5000/transactions', {
+        const transactionsResponse = await fetch(`${config.api_url}/transactions`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
