@@ -40,7 +40,7 @@ Recent activity
 
 Simple graphs
 
-🛡️ An Admin Can:
+ An Admin Can:
 Log in via a secure admin panel.
 
 View a list of all users and their activity.
@@ -49,7 +49,7 @@ Suspend or activate user accounts.
 
 View and manage all hustles, transactions, and debts.
 
-🧾 Database Relationships
+Database Relationships
 User → Hustles: One-to-Many
 
 Hustle → Transactions: One-to-Many
@@ -57,3 +57,39 @@ Hustle → Transactions: One-to-Many
 Hustle → Debts: One-to-Many
 
 Each hustle belongs to one user, and each transaction or debt is tied to a specific hustle.
+
+Known Bugs
+The application is currently stable and fully functional.
+
+If you encounter issues, please contact the developer.
+
+
+
+ Technologies Used
+Frontend:
+
+React
+
+Tailwind CSS
+
+React Icons
+
+
+
+Backend:
+
+Flask (Python)
+
+Flask-JWT-Extended
+
+Flask-Mail
+
+Flask-SQLAlchemy
+
+
+
+ Support & Contact
+ Email: gloriaandonya01@gmail.com
+
+ License
+Licensed under the MIT License.
