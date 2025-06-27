@@ -1,5 +1,5 @@
 
-🛠️ Mtaa Hustle Manager
+ MTAA HUSTLE MANAGER
 A financial tracking platform built for Kenya’s informal sector.
 
  Date: 27/06/2025
