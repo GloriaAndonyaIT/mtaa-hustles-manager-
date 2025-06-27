@@ -89,7 +89,7 @@ Flask-SQLAlchemy
 
 
  Support & Contact
- Email: gloriaandonya01@gmail.com
+ Email: gloriaandonyaa@gmail.com
 
  License
 Licensed under the MIT License.
