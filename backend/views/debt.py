@@ -24,10 +24,14 @@ def create_debt():
         return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json()
+    
+    # Validate that we have JSON data
+    if not data:
+        return jsonify({"error": "No JSON data provided"}), 400
 
     # Validate required fields
     required_fields = ["amount", "description", "date", "creditor", "due_date"]
-    missing_fields = [field for field in required_fields if field not in data]
+    missing_fields = [field for field in required_fields if field not in data or not data[field]]
     if missing_fields:
         return jsonify({
             "error": "Missing required fields",
@@ -37,8 +41,11 @@ def create_debt():
     try:
         # Parse and validate data
         amount = float(data["amount"])
+        if amount <= 0:
+            return jsonify({"error": "Amount must be greater than 0"}), 400
+            
         date = datetime.strptime(data["date"], "%Y-%m-%d").date()
-        due_date = datetime.strptime(data["due_date"], "%Y-%m-%d")
+        due_date = datetime.strptime(data["due_date"], "%Y-%m-%d").date()  # Fixed: Convert to date
         status = data.get("status", "pending").lower()
         hustle_id = data.get("hustle_id")
 
@@ -52,11 +59,15 @@ def create_debt():
 
         # Validate hustle if provided
         if hustle_id:
-            hustle = Hustle.query.get(hustle_id)
-            if not hustle:
-                return jsonify({"error": "Hustle not found"}), 404
-            if not current_user.is_admin and hustle.user_id != current_user.id:
-                return jsonify({"error": "Hustle does not belong to you"}), 403
+            try:
+                hustle_id = int(hustle_id)
+                hustle = Hustle.query.get(hustle_id)
+                if not hustle:
+                    return jsonify({"error": "Hustle not found"}), 404
+                if not current_user.is_admin and hustle.user_id != current_user.id:
+                    return jsonify({"error": "Hustle does not belong to you"}), 403
+            except (ValueError, TypeError):
+                return jsonify({"error": "Invalid hustle_id format"}), 400
 
         # Create new debt
         new_debt = Debt(
@@ -79,17 +90,19 @@ def create_debt():
         }), 201
 
     except ValueError as e:
+        db.session.rollback()
         return jsonify({
             "error": "Invalid data format",
             "message": str(e),
             "expected": {
-                "amount": "number",
+                "amount": "positive number",
                 "date": "YYYY-MM-DD",
                 "due_date": "YYYY-MM-DD"
             }
         }), 400
     except Exception as e:
         db.session.rollback()
+        print(f"Error creating debt: {str(e)}")  # Log the actual error
         return jsonify({
             "error": "Failed to create debt",
             "message": str(e)
@@ -103,15 +116,19 @@ def get_debt(debt_id):
     if not current_user:
         return jsonify({"error": "Unauthorized"}), 401
 
-    debt = Debt.query.get(debt_id)
-    if not debt:
-        return jsonify({"error": "Debt not found"}), 404
+    try:
+        debt = Debt.query.get(debt_id)
+        if not debt:
+            return jsonify({"error": "Debt not found"}), 404
 
-    # Check permissions
-    if not current_user.is_admin and debt.user_id != current_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        # Check permissions
+        if not current_user.is_admin and debt.user_id != current_user.id:
+            return jsonify({"error": "Access denied"}), 403
 
-    return jsonify(debt.to_dict()), 200
+        return jsonify(debt.to_dict()), 200
+    except Exception as e:
+        print(f"Error fetching debt: {str(e)}")
+        return jsonify({"error": "Failed to fetch debt"}), 500
 
 # GET ALL DEBTS (with filters)
 @debt_bp.route("/debts", methods=["GET"])
@@ -121,54 +138,62 @@ def get_all_debts():
     if not current_user:
         return jsonify({"error": "Unauthorized"}), 401
 
-    # Get query parameters
-    status = request.args.get('status')
-    creditor = request.args.get('creditor')
-    hustle_id = request.args.get('hustle_id')
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    search = request.args.get('search')
+    try:
+        # Get query parameters
+        status = request.args.get('status')
+        creditor = request.args.get('creditor')
+        hustle_id = request.args.get('hustle_id')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        search = request.args.get('search')
 
-    # Base query
-    if current_user.is_admin:
-        query = Debt.query
-    else:
-        query = Debt.query.filter_by(user_id=current_user.id)
+        # Base query
+        if current_user.is_admin:
+            query = Debt.query
+        else:
+            query = Debt.query.filter_by(user_id=current_user.id)
 
-    # Apply filters
-    if status:
-        query = query.filter(Debt.status.ilike(status))
-    if creditor:
-        query = query.filter(Debt.creditor.ilike(f"%{creditor}%"))
-    if hustle_id:
-        query = query.filter_by(hustle_id=hustle_id)
-    if start_date:
-        try:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-            query = query.filter(Debt.date >= start_date)
-        except ValueError:
-            return jsonify({"error": "Invalid start date format"}), 400
-    if end_date:
-        try:
-            end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
-            query = query.filter(Debt.date <= end_date)
-        except ValueError:
-            return jsonify({"error": "Invalid end date format"}), 400
-    if search:
-        query = query.filter(
-            or_(
-                Debt.description.ilike(f"%{search}%"),
-                Debt.creditor.ilike(f"%{search}%")
+        # Apply filters
+        if status:
+            query = query.filter(Debt.status.ilike(status))
+        if creditor:
+            query = query.filter(Debt.creditor.ilike(f"%{creditor}%"))
+        if hustle_id:
+            try:
+                hustle_id = int(hustle_id)
+                query = query.filter_by(hustle_id=hustle_id)
+            except (ValueError, TypeError):
+                return jsonify({"error": "Invalid hustle_id format"}), 400
+        if start_date:
+            try:
+                start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+                query = query.filter(Debt.date >= start_date)
+            except ValueError:
+                return jsonify({"error": "Invalid start date format"}), 400
+        if end_date:
+            try:
+                end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+                query = query.filter(Debt.date <= end_date)
+            except ValueError:
+                return jsonify({"error": "Invalid end date format"}), 400
+        if search:
+            query = query.filter(
+                or_(
+                    Debt.description.ilike(f"%{search}%"),
+                    Debt.creditor.ilike(f"%{search}%")
+                )
             )
-        )
 
-    # Execute query
-    debts = query.order_by(Debt.due_date.asc()).all()
-    
-    return jsonify({
-        "debts": [debt.to_dict() for debt in debts],
-        "count": len(debts)
-    }), 200
+        # Execute query
+        debts = query.order_by(Debt.due_date.asc()).all()
+        
+        return jsonify({
+            "debts": [debt.to_dict() for debt in debts],
+            "count": len(debts)
+        }), 200
+    except Exception as e:
+        print(f"Error fetching debts: {str(e)}")
+        return jsonify({"error": "Failed to fetch debts"}), 500
 
 # UPDATE DEBT
 @debt_bp.route("/debts/<int:debt_id>", methods=["PUT"])
@@ -178,38 +203,64 @@ def update_debt(debt_id):
     if not current_user:
         return jsonify({"error": "Unauthorized"}), 401
 
-    debt = Debt.query.get(debt_id)
-    if not debt:
-        return jsonify({"error": "Debt not found"}), 404
-
-    # Check permissions
-    if not current_user.is_admin and debt.user_id != current_user.id:
-        return jsonify({"error": "Access denied"}), 403
-
-    data = request.get_json()
-
     try:
+        debt = Debt.query.get(debt_id)
+        if not debt:
+            return jsonify({"error": "Debt not found"}), 404
+
+        # Check permissions
+        if not current_user.is_admin and debt.user_id != current_user.id:
+            return jsonify({"error": "Access denied"}), 403
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+
         # Update fields
         if 'amount' in data:
-            debt.amount = float(data['amount'])
+            amount = float(data['amount'])
+            if amount <= 0:
+                return jsonify({"error": "Amount must be greater than 0"}), 400
+            debt.amount = amount
+            
         if 'description' in data:
             debt.description = data['description']
+            
         if 'creditor' in data:
+            if not data['creditor'].strip():
+                return jsonify({"error": "Creditor cannot be empty"}), 400
             debt.creditor = data['creditor']
+            
         if 'status' in data:
-            debt.status = data['status'].lower()
+            status = data['status'].lower()
+            valid_statuses = ["pending", "partially_paid", "paid"]
+            if status not in valid_statuses:
+                return jsonify({
+                    "error": "Invalid status",
+                    "valid_statuses": valid_statuses
+                }), 400
+            debt.status = status
+            
         if 'hustle_id' in data:
             if data['hustle_id']:
-                hustle = Hustle.query.get(data['hustle_id'])
-                if not hustle:
-                    return jsonify({"error": "Hustle not found"}), 404
-                if not current_user.is_admin and hustle.user_id != current_user.id:
-                    return jsonify({"error": "Hustle does not belong to you"}), 403
-            debt.hustle_id = data['hustle_id']
+                try:
+                    hustle_id = int(data['hustle_id'])
+                    hustle = Hustle.query.get(hustle_id)
+                    if not hustle:
+                        return jsonify({"error": "Hustle not found"}), 404
+                    if not current_user.is_admin and hustle.user_id != current_user.id:
+                        return jsonify({"error": "Hustle does not belong to you"}), 403
+                    debt.hustle_id = hustle_id
+                except (ValueError, TypeError):
+                    return jsonify({"error": "Invalid hustle_id format"}), 400
+            else:
+                debt.hustle_id = None
+                
         if 'date' in data:
             debt.date = datetime.strptime(data['date'], "%Y-%m-%d").date()
+            
         if 'due_date' in data:
-            debt.due_date = datetime.strptime(data['due_date'], "%Y-%m-%d")
+            debt.due_date = datetime.strptime(data['due_date'], "%Y-%m-%d").date()  # Fixed: Convert to date
 
         db.session.commit()
         return jsonify({
@@ -225,6 +276,7 @@ def update_debt(debt_id):
         }), 400
     except Exception as e:
         db.session.rollback()
+        print(f"Error updating debt: {str(e)}")
         return jsonify({
             "error": "Failed to update debt",
             "message": str(e)
@@ -238,20 +290,21 @@ def delete_debt(debt_id):
     if not current_user:
         return jsonify({"error": "Unauthorized"}), 401
 
-    debt = Debt.query.get(debt_id)
-    if not debt:
-        return jsonify({"error": "Debt not found"}), 404
-
-    # Check permissions
-    if not current_user.is_admin and debt.user_id != current_user.id:
-        return jsonify({"error": "Access denied"}), 403
-
     try:
+        debt = Debt.query.get(debt_id)
+        if not debt:
+            return jsonify({"error": "Debt not found"}), 404
+
+        # Check permissions
+        if not current_user.is_admin and debt.user_id != current_user.id:
+            return jsonify({"error": "Access denied"}), 403
+
         db.session.delete(debt)
         db.session.commit()
         return jsonify({"success": "Debt deleted successfully"}), 200
     except Exception as e:
         db.session.rollback()
+        print(f"Error deleting debt: {str(e)}")
         return jsonify({
             "error": "Failed to delete debt",
             "message": str(e)
