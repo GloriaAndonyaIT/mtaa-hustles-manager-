@@ -1,98 +1,112 @@
-Mtaa Hustle Manager
-A financial tracking platform built for Kenya’s informal sector.
+# Mtaa Hustle Manager
 
-Date: 27/06/2025
- By: Gloria Andonya
+*A financial tracking platform built for Kenya’s informal sector.*
 
- Description
-Mtaa Hustle Manager is a web-based application tailored for informal sector workers in Kenya such as:
+ **Date:** 27/06/2025  
+ **By:** Gloria Andonya  
+ **Demo Presentation:** [Watch on YouTube](https://youtu.be/LumO-IM7-Uk)
 
-Mama mbogas
+---
 
-Mitumba sellers
+##  Description
 
-Boda boda riders
+**Mtaa Hustle Manager** is a web-based application designed to empower informal workers in Kenya—such as:
 
-Other small-scale entrepreneurs
+- Mama mbogas  
+- Mitumba sellers  
+- Boda boda riders  
+- Small-scale entrepreneurs  
 
-It helps users manage their daily hustles by tracking income, expenses, debts, and setting business goals, offering a simple digital alternative to manual bookkeeping.
+The platform offers a simple and secure way to track:
 
- Features / User Stories
- A User Can:
-Register an account using name, email, and password
+- Income  
+- Expenses  
+- Customer debts  
+- Business goals  
 
-Log in using their credentials
+This helps users transition from manual bookkeeping to digital financial management.
 
-View and manage their profile and hustles
+---
 
-Delete their account if desired
+##  Features & User Stories
 
-Add, view, and delete hustles (e.g. Mitumba, Salon)
+###  User Capabilities
 
-Record income or expenses with amount, description, hustle, and date
+- **Authentication:**
+  - Register with name, email, and password
+  - Log in securely
+  - Delete account if desired
 
-Filter and view transactions by hustle or date
+- **Hustle Management:**
+  - Add, view, and delete hustles (e.g. Mitumba, Salon)
+  - View and manage profile details
 
-Edit or delete any transaction
+- **Transaction Tracking:**
+  - Record income and expenses with amount, description, hustle, and date
+  - Edit or delete transactions
+  - Filter transactions by hustle or date
 
-Add customer debts with name, amount, date, and hustle
+- **Debt Management:**
+  - Add customer debts with name, amount, date, and hustle
+  - View, update (e.g., mark as paid), or delete debts
 
-View, update (e.g. mark as paid), or delete debts
+- **Dashboard Overview:**
+  - View total income
+  - Track total debt
+  - Access recent activity logs
+  - View simple graphs and insights
 
-View an overview dashboard with:
+###  Admin Capabilities
 
-Total income
+- Log in via secure admin panel
+- View a list of all users and their activities
+- Activate or suspend user accounts
+- Manage all hustles, transactions, and debts
 
-Total debt
+---
 
-Recent activity
+##  Database Relationships
 
-Simple graphs
+- **User → Hustles:** One-to-Many  
+  A user can have multiple hustles
 
- An Admin Can:
-Log in via a secure admin panel
+- **Hustle → Transactions:** One-to-Many  
+  Each hustle can have many income/expense entries
 
-View a list of all users and their activities
+- **Hustle → Debts:** One-to-Many  
+  Each hustle can have several customer debts
 
-Suspend or activate user accounts
+---
 
-View and manage all hustles, transactions, and debts
+##  Known Bugs
 
-Database Relationships
-User → Hustles: One-to-Many
-One user can create multiple hustles.
+- The application is currently stable and fully functional  
+- For bug reports or suggestions, kindly reach out via the contact details below
 
-Hustle → Transactions: One-to-Many
-Each hustle can have multiple income or expense records.
+---
 
-Hustle → Debts: One-to-Many
-Each hustle can have several associated customer debts.
+##  Technologies Used
 
- Known Bugs
-The application is currently stable and fully functional.
+###  Frontend
+- **React**
+- **Tailwind CSS**
+- **React Icons**
 
-If you encounter any issues, please contact the developer.
+###  Backend
+- **Flask (Python)**
+- **Flask-JWT-Extended**
+- **Flask-Mail**
+- **Flask-SQLAlchemy**
 
-  Technologies Used
-  
-Frontend:
-React
+---
 
-Tailwind CSS
+##  Support & Contact
 
-React Icons
+If you have any questions, feedback, or bug reports:  
+ **Email:** gloriaandonyaa@gmail.com
 
-Backend:
-Flask (Python)
+---
 
-Flask-JWT-Extended
+##  License
 
-Flask-Mail
-
-Flask-SQLAlchemy
-
-Support & Contact
-Email: gloriaandonyaa@gmail.com
-
- License
-Licensed under the MIT License.
+This project is licensed under the **MIT License**.
