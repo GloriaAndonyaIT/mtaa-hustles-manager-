@@ -7,7 +7,6 @@ from sqlalchemy import or_
 debt_bp = Blueprint('debt', __name__)
 
 def get_current_user():
-    """Helper function to get current user from JWT"""
     try:
         current_user_id = get_jwt_identity()
         return User.query.get(current_user_id) if current_user_id else None
@@ -15,7 +14,6 @@ def get_current_user():
         print(f"Error getting current user: {str(e)}")
         return None
 
-# CREATE DEBT
 @debt_bp.route("/debts", methods=["POST"])
 @jwt_required()
 def create_debt():
@@ -24,12 +22,9 @@ def create_debt():
         return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json()
-    
-    # Validate that we have JSON data
     if not data:
         return jsonify({"error": "No JSON data provided"}), 400
 
-    # Validate required fields
     required_fields = ["amount", "description", "date", "creditor", "due_date"]
     missing_fields = [field for field in required_fields if field not in data or not data[field]]
     if missing_fields:
@@ -39,17 +34,20 @@ def create_debt():
         }), 400
 
     try:
-        # Parse and validate data
         amount = float(data["amount"])
         if amount <= 0:
             return jsonify({"error": "Amount must be greater than 0"}), 400
-            
+
         date = datetime.strptime(data["date"], "%Y-%m-%d").date()
-        due_date = datetime.strptime(data["due_date"], "%Y-%m-%d").date()  # Fixed: Convert to date
-        status = data.get("status", "pending").lower()
+        due_date = datetime.strptime(data["due_date"], "%Y-%m-%d")  # ✅ Fixed: use datetime
+
+        status = data.get("status", "pending")
+        if not isinstance(status, str):
+            return jsonify({"error": "Status must be a string"}), 400
+        status = status.lower()
+
         hustle_id = data.get("hustle_id")
 
-        # Validate status
         valid_statuses = ["pending", "partially_paid", "paid"]
         if status not in valid_statuses:
             return jsonify({
@@ -57,7 +55,6 @@ def create_debt():
                 "valid_statuses": valid_statuses
             }), 400
 
-        # Validate hustle if provided
         if hustle_id:
             try:
                 hustle_id = int(hustle_id)
@@ -69,7 +66,6 @@ def create_debt():
             except (ValueError, TypeError):
                 return jsonify({"error": "Invalid hustle_id format"}), 400
 
-        # Create new debt
         new_debt = Debt(
             amount=amount,
             description=data["description"],
@@ -102,11 +98,12 @@ def create_debt():
         }), 400
     except Exception as e:
         db.session.rollback()
-        print(f"Error creating debt: {str(e)}")  # Log the actual error
+        print(f"Error creating debt: {str(e)}")  
         return jsonify({
             "error": "Failed to create debt",
             "message": str(e)
         }), 500
+
 
 # GET DEBT BY ID
 @debt_bp.route("/debts/<int:debt_id>", methods=["GET"])

@@ -28,6 +28,7 @@ class User(db.Model):
     # relationships
     hustles = db.relationship('Hustle', backref='user', lazy=True)
     transactions = db.relationship('Transaction', backref='user', lazy=True)
+
     
     
 
@@ -147,6 +148,11 @@ class Transaction(db.Model):
 
 
 
+from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
 class Debt(db.Model):
     __tablename__ = 'debts'
     
@@ -155,15 +161,18 @@ class Debt(db.Model):
     description = db.Column(db.String, nullable=False)
     date = db.Column(db.Date, nullable=False)
     creditor = db.Column(db.String(100), nullable=True)
-    due_date = db.Column(db.DateTime, nullable=True)
-    status = db.Column(db.String(50), nullable=True) # e.g., 'pending', 'paid'
+    due_date = db.Column(db.DateTime, nullable=True)  
+    status = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     hustle_id = db.Column(db.Integer, db.ForeignKey('hustles.id'), nullable=True)
 
+
+    hustle = db.relationship("Hustle", backref="debts")
+
     def to_dict(self):
-            return {
+        return {
             "id": self.id,
             "amount": self.amount,
             "description": self.description,
@@ -175,5 +184,6 @@ class Debt(db.Model):
             "user_id": self.user_id,
             "hustle_title": self.hustle.title if self.hustle else None
         }
+
 
 
